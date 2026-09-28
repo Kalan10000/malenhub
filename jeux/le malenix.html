@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Le Malenix — Jeu Sémantique Néon ✌️</title>
+  
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            pinkbrand: {
+              400: '#f472b6',
+              500: '#ec4899',
+              600: '#db2777',
+              neon: '#ff2a8d'
+            },
+            purplebrand: {
+              400: '#c084fc',
+              500: '#a855f7',
+              600: '#9333ea',
+              800: '#581c87',
+              900: '#3b0764',
+              950: '#1a052e'
+            }
+          },
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #3b0764 0%, #1a052e 50%, #0a0112 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+    }
+
+    .glass-card {
+      background: rgba(30, 10, 48, 0.65);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(236, 72, 153, 0.25);
+      box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6), 0 0 20px 0 rgba(236, 72, 153, 0.1);
+    }
+
+    .glass-input {
+      background: rgba(15, 3, 25, 0.75);
+      border: 2px solid rgba(168, 85, 247, 0.35);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .glass-input:focus {
+      border-color: #ff2a8d;
+      box-shadow: 0 0 25px rgba(255, 42, 141, 0.45);
+    }
+
+    .btn-neon {
+      background: linear-gradient(135deg, #ff2a8d 0%, #a855f7 100%);
+      box-shadow: 0 0 20px rgba(255, 42, 141, 0.4);
+      transition: all 0.3s ease;
+    }
+
+    .btn-neon:hover {
+      box-shadow: 0 0 30px rgba(255, 42, 141, 0.7);
+      transform: translateY(-2px);
+    }
+
+    .text-glow-pink {
+      text-shadow: 0 0 15px rgba(255, 42, 141, 0.6), 0 0 30px rgba(236, 72, 153, 0.4);
+    }
+
+    /* Overlay pour l'emoji géant Malena */
+    #giant-emoji-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.2);
+      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    #giant-emoji-overlay.active {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .giant-emoji {
+      font-size: min(45vw, 350px);
+      filter: drop-shadow(0 0 50px #ff2a8d) drop-shadow(0 0 100px #a855f7);
+      animation: pulseGiant 1.2s infinite alternate ease-in-out;
+    }
+
+    @keyframes pulseGiant {
+      from { transform: scale(1) rotate(-6deg); }
+      to { transform: scale(1.1) rotate(6deg); }
+    }
+
+    #victory-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 9998;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(26, 5, 46, 0.5); }
+    ::-webkit-scrollbar-thumb { background: rgba(236, 72, 153, 0.4); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 42, 141, 0.7); }
+  </style>
+</head>
+<body class="relative flex flex-col justify-between overflow-x-hidden selection:bg-pinkbrand-neon selection:text-white">
+
+  <canvas id="victory-canvas"></canvas>
+
+  <!-- Giant Emoji Container pour 'malena' -->
+  <div id="giant-emoji-overlay">
+    <div class="giant-emoji">✌️</div>
+  </div>
+
+  <!-- Background glow effects -->
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-pinkbrand-neon/15 rounded-full blur-[140px] pointer-events-none"></div>
+
+  <header class="border-b border-pink-500/20 bg-purplebrand-950/80 backdrop-blur-xl sticky top-0 z-30">
+    <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-2xl btn-neon flex items-center justify-center text-white text-2xl font-black border border-pink-300/40 shadow-lg">
+          ✌️
+        </div>
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-wider uppercase bg-gradient-to-r from-pink-400 via-fuchsia-300 to-purple-400 bg-clip-text text-transparent text-glow-pink">
+            LE MALENIX
+          </h1>
+          <p class="text-xs text-pink-300/70 font-semibold tracking-wider">Jeu de Similarité Sémantique</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="btn-give-up" class="px-3.5 py-2.5 rounded-2xl bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/40 text-rose-300 transition-all text-xs font-bold flex items-center gap-2 active:scale-95">
+          <i class="fa-solid fa-flag"></i>
+          <span class="hidden sm:inline">Abandonner</span>
+        </button>
+        <button id="btn-new-word" class="px-4 py-2.5 rounded-2xl btn-neon text-white transition-all text-xs font-bold flex items-center gap-2 active:scale-95 border border-pink-300/30">
+          <i class="fa-solid fa-shuffle"></i>
+          <span>Nouveau Mot</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl w-full mx-auto px-4 py-6 flex-grow flex flex-col gap-6 z-10">
+
+    <!-- Section Indice -->
+    <section class="glass-card rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-2xl bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-300 text-2xl shrink-0">
+          💡
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-pink-200">Trouvez le mot secret</h2>
+          <p class="text-xs text-purple-200/70">Proposez un mot pour tester sa température sémantique (jusqu'à <strong class="text-emerald-400">1000°C ✌️</strong>).</p>
+        </div>
+      </div>
+      <button id="btn-hint" class="w-full sm:w-auto px-5 py-3 rounded-2xl bg-purplebrand-900/60 hover:bg-purplebrand-800/80 border border-pink-500/40 text-pink-200 text-xs font-bold transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95 shadow-md">
+        <i class="fa-solid fa-lightbulb text-amber-300"></i>
+        <span>Obtenir un Indice</span>
+      </button>
+    </section>
+
+    <!-- Indice Box -->
+    <div id="hint-box" class="hidden glass-card border-amber-500/50 rounded-2xl p-4 text-amber-200 text-sm flex items-center gap-3 bg-amber-950/30">
+      <i class="fa-solid fa-key text-xl text-amber-400"></i>
+      <span id="hint-text"></span>
+    </div>
+
+    <!-- Stats Bar -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+      <div class="glass-card rounded-2xl p-3.5">
+        <span class="text-[11px] text-pink-300/70 font-semibold uppercase tracking-wider block">Essais</span>
+        <span id="stat-attempts" class="text-2xl sm:text-3xl font-black text-white">0</span>
+      </div>
+      <div class="glass-card rounded-2xl p-3.5">
+        <span class="text-[11px] text-pink-300/70 font-semibold uppercase tracking-wider block">Meilleur Score</span>
+        <span id="stat-best-score" class="text-2xl sm:text-3xl font-black text-pinkbrand-neon text-glow-pink">0°C</span>
+      </div>
+      <div class="glass-card rounded-2xl p-3.5">
+        <span class="text-[11px] text-pink-300/70 font-semibold uppercase tracking-wider block">Proximité</span>
+        <span id="stat-best-rank" class="text-2xl sm:text-3xl font-black text-purple-300">0%</span>
+      </div>
+      <div class="glass-card rounded-2xl p-3.5 flex flex-col items-center justify-center">
+        <span class="text-[11px] text-pink-300/70 font-semibold uppercase tracking-wider block">Statut</span>
+        <span id="game-status" class="text-xs font-bold px-3 py-1 rounded-xl bg-pink-500/20 text-pink-300 border border-pink-500/40 inline-block mt-1">
+          En jeu
+        </span>
+      </div>
+    </section>
+
+    <!-- Input Form Card -->
+    <section class="glass-card rounded-3xl p-5 sm:p-6">
+      <form id="guess-form" class="flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-grow">
+          <input type="text" id="word-input" autocomplete="off" autofocus placeholder="Proposez un mot..." 
+            class="w-full glass-input rounded-2xl px-5 py-4 text-white placeholder-purple-300/40 text-lg font-semibold focus:outline-none">
+          <button type="button" id="btn-clear" class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-purple-400 hover:text-pink-300 p-1">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+        <button type="submit" class="btn-neon text-white font-black px-8 py-4 rounded-2xl text-lg flex items-center justify-center gap-2 border border-pink-300/40 shrink-0">
+          <span>Deviner</span>
+          <i class="fa-solid fa-paper-plane text-sm"></i>
+        </button>
+      </form>
+
+      <div id="feedback-msg" class="mt-3 text-sm hidden font-semibold flex items-center gap-2"></div>
+    </section>
+
+    <!-- Table d'historique -->
+    <section class="glass-card rounded-3xl p-5 sm:p-6 flex-grow flex flex-col min-h-[300px]">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-pink-200 flex items-center gap-2">
+          <i class="fa-solid fa-fire-flame-curved text-pink-500"></i>
+          Historique des essais
+        </h3>
+        <span class="text-xs text-purple-300/60 font-medium">Trié par température</span>
+      </div>
+
+      <div class="grid grid-cols-12 gap-2 pb-3 border-b border-purple-500/20 text-[11px] font-bold text-purple-300/60 uppercase tracking-wider px-3">
+        <div class="col-span-1 text-center">N°</div>
+        <div class="col-span-4 sm:col-span-3">Mot</div>
+        <div class="col-span-3 sm:col-span-3 text-center">Température</div>
+        <div class="col-span-4 sm:col-span-5">Barre de Proximité</div>
+      </div>
+
+      <div id="attempts-list" class="flex-grow overflow-y-auto space-y-2.5 mt-3 pr-1 max-h-[380px]">
+        <div id="empty-state" class="h-44 flex flex-col items-center justify-center text-purple-300/40 gap-3">
+          <span class="text-5xl animate-bounce">✌️</span>
+          <p class="text-xs font-semibold uppercase tracking-wider text-center">Entrez un premier mot pour commencer !</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modale de Victoire -->
+  <div id="modal-victory" class="fixed inset-0 bg-purplebrand-950/80 backdrop-blur-xl z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-card border-2 border-pinkbrand-neon w-full max-w-md rounded-3xl p-6 sm:p-8 text-center relative text-slate-200">
+      <div class="text-6xl mb-3 animate-bounce">✌️</div>
+      <h3 class="text-3xl font-black bg-gradient-to-r from-pink-400 via-fuchsia-300 to-purple-300 bg-clip-text text-transparent text-glow-pink mb-1">
+        VICTOIRE !
+      </h3>
+      <p class="text-purple-300 text-xs font-semibold mb-4 uppercase tracking-wider">Vous avez découvert le mot secret</p>
+      
+      <div id="victory-word-display" class="text-3xl font-black uppercase tracking-widest text-pink-300 bg-purplebrand-900/80 border-2 border-pink-500/60 py-4 px-6 rounded-2xl mb-6 shadow-inner text-glow-pink">
+        -
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-6 text-left">
+        <div class="bg-purplebrand-900/50 p-3.5 rounded-2xl border border-purple-700/50">
+          <span class="text-[11px] text-purple-300/70 font-semibold uppercase block">Tentatives</span>
+          <p id="victory-attempts" class="text-2xl font-black text-white">0</p>
+        </div>
+        <div class="bg-purplebrand-900/50 p-3.5 rounded-2xl border border-purple-700/50">
+          <span class="text-[11px] text-purple-300/70 font-semibold uppercase block">Temps</span>
+          <p id="victory-time" class="text-2xl font-black text-white">0s</p>
+        </div>
+      </div>
+
+      <button id="btn-play-again" class="w-full btn-neon text-white font-extrabold py-3.5 rounded-2xl transition text-base">
+        Partie Suivante ✌️
+      </button>
+    </div>
+  </div>
+
+  <footer class="border-t border-purple-900/40 py-4 text-center text-xs text-purple-300/40 font-medium">
+    Le Malenix &copy; 2026 — Thème Néon Rose & Violet ✌️
+  </footer>
+
+  <script>
+    // Dictionnaire de mots secrets et associations sémantiques
+    const SEMANTIC_DICTIONARY = {
+      "soleil": {
+        category: "Astronomie & Nature ☀️",
+        sims: { "lumiere": 980, "chaleur": 960, "ete": 940, "rayon": 920, "ciel": 900, "etoile": 880, "jour": 850, "jaune": 820, "briller": 800, "plage": 780, "bronzer": 750, "feu": 650, "chaud": 620, "nuage": 520, "lune": 280 }
+      },
+      "chat": {
+        category: "Animaux & Compagnie 🐱",
+        sims: { "chaton": 980, "miauler": 960, "felin": 940, "moustaches": 920, "poil": 900, "chien": 880, "animal": 850, "griffer": 820, "ronronner": 800, "souris": 750, "pattes": 680 }
+      },
+      "maison": {
+        category: "Habitation & Foyer 🏠",
+        sims: { "foyer": 980, "appartement": 950, "chambre": 920, "toit": 900, "porte": 870, "famille": 840, "jardin": 800, "immeuble": 760, "fenetre": 720, "cuisine": 700 }
+      },
+      "fleur": {
+        category: "Botanique & Nature 🌸",
+        sims: { "rose": 980, "petal": 950, "jardin": 920, "parfum": 900, "plante": 870, "bouquet": 850, "couleur": 800, "printemps": 780, "nature": 740, "rouge": 700 }
+      },
+      "amour": {
+        category: "Sentiments & Émotions ❤️",
+        sims: { "passion": 980, "coeur": 960, "affection": 930, "mariage": 900, "tendresse": 880, "couple": 850, "romantique": 820, "sentiment": 800, "joie": 750, "bisous": 720 }
+      },
+      "musique": {
+        category: "Art & Divertissement 🎵",
+        sims: { "chanson": 980, "melodie": 960, "instrument": 930, "guitare": 900, "piano": 880, "rythme": 850, "son": 820, "concert": 800, "danse": 760, "ecouter": 720 }
+      },
+      "chocolat": {
+        category: "Gourmandise & Cuisine 🍫",
+        sims: { "cacao": 980, "sucre": 950, "gateau": 930, "bonbon": 900, "lait": 870, "noir": 840, "dessert": 820, "gourmand": 800, "cuisine": 750, "douceur": 720 }
+      },
+      "plage": {
+        category: "Vacances & Mer 🏖️",
+        sims: { "sable": 980, "mer": 960, "ocean": 940, "vague": 910, "vacances": 880, "soleil": 850, "coquillage": 820, "baignade": 800, "ete": 780, "parasol": 750 }
+      },
+      "lune": {
+        category: "Espace & Nuit 🌙",
+        sims: { "nuit": 980, "etoile": 950, "ciel": 930, "croissant": 900, "espace": 870, "obscurite": 840, "planete": 820, "soleil": 800, "sommeil": 750, "reve": 720 }
+      },
+      "gateau": {
+        category: "Pâtisserie 🎂",
+        sims: { "tarte": 980, "chocolat": 950, "bougie": 920, "anniversaire": 900, "sucre": 870, "farine": 840, "four": 820, "dessert": 800, "creme": 780, "gourmandise": 750 }
+      }
+    };
+
+    const SECRET_WORDS_LIST = Object.keys(SEMANTIC_DICTIONARY);
+
+    let targetWord = "";
+    let attempts = [];
+    let startTime = Date.now();
+    let isFinished = false;
+
+    // Animation Canvas pour les ✌️
+    let canvas, ctx;
+    let particles = [];
+    let animFrameId = null;
+
+    function initCanvas() {
+      canvas = document.getElementById('victory-canvas');
+      ctx = canvas.getContext('2d');
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+    }
+
+    function resizeCanvas() {
+      if (!canvas) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function triggerVictoryEmojiStorm() {
+      particles = [];
+      const count = 130;
+
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: -Math.random() * canvas.height * 0.5,
+          vx: (Math.random() - 0.5) * 6,
+          vy: Math.random() * 5 + 3,
+          size: Math.random() * 24 + 20,
+          emoji: '✌️',
+          rot: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 0.1
+        });
+      }
+
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      renderCanvasAnimation();
+    }
+
+    function renderCanvasAnimation() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < particles.length; i++) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vRot;
+
+        if (p.y > canvas.height + 40) {
+          p.y = -30;
+          p.x = Math.random() * canvas.width;
+        }
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.font = `${p.size}px sans-serif`;
+        ctx.fillText(p.emoji, -p.size / 2, p.size / 2);
+        ctx.restore();
+      }
+
+      animFrameId = requestAnimationFrame(renderCanvasAnimation);
+    }
+
+    // Effet Géant "malena"
+    function triggerMalenaEffect() {
+      const overlay = document.getElementById('giant-emoji-overlay');
+      overlay.classList.add('active');
+
+      setTimeout(() => {
+        overlay.classList.remove('active');
+      }, 1500);
+    }
+
+    function normalizeStr(str) {
+      return str.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function getSimilarityScore(word) {
+      const cleanInput = normalizeStr(word);
+      const cleanTarget = normalizeStr(targetWord);
+
+      if (cleanInput === cleanTarget) return 1000;
+
+      const targetData = SEMANTIC_DICTIONARY[cleanTarget];
+      if (targetData && targetData.sims && targetData.sims[cleanInput] !== undefined) {
+        return targetData.sims[cleanInput];
+      }
+
+      let score = 25;
+      if (cleanInput.length > 2 && cleanTarget.includes(cleanInput)) score += 160;
+      if (cleanTarget.length > 2 && cleanInput.includes(cleanTarget)) score += 160;
+      if (cleanInput[0] === cleanTarget[0]) score += 40;
+
+      let hash = 0;
+      for (let i = 0; i < cleanInput.length; i++) {
+        hash = (hash << 5) - hash + cleanInput.charCodeAt(i);
+        hash |= 0;
+      }
+      score += Math.abs(hash % 180);
+
+      return Math.min(score, 450);
+    }
+
+    function pickRandomWord() {
+      const randomIndex = Math.floor(Math.random() * SECRET_WORDS_LIST.length);
+      return SECRET_WORDS_LIST[randomIndex];
+    }
+
+    function startNewGame(wordToUse = null) {
+      targetWord = wordToUse || pickRandomWord();
+      attempts = [];
+      startTime = Date.now();
+      isFinished = false;
+
+      document.getElementById('stat-attempts').textContent = '0';
+      document.getElementById('stat-best-score').textContent = '0°C';
+      document.getElementById('stat-best-rank').textContent = '0%';
+      document.getElementById('game-status').textContent = 'En jeu';
+      document.getElementById('game-status').className = 'text-xs font-bold px-3 py-1 rounded-xl bg-pink-500/20 text-pink-300 border border-pink-500/40 inline-block mt-1';
+
+      document.getElementById('hint-box').classList.add('hidden');
+      document.getElementById('feedback-msg').classList.add('hidden');
+      document.getElementById('modal-victory').classList.add('hidden');
+
+      document.getElementById('attempts-list').innerHTML = `
+        <div id="empty-state" class="h-44 flex flex-col items-center justify-center text-purple-300/40 gap-3">
+          <span class="text-5xl animate-bounce">✌️</span>
+          <p class="text-xs font-semibold uppercase tracking-wider text-center">Entrez un premier mot pour commencer !</p>
+        </div>`;
+
+      const input = document.getElementById('word-input');
+      input.value = '';
+      input.disabled = false;
+      input.focus();
+
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+    }
+
+    function handleGuessSubmit(word) {
+      if (isFinished) return;
+
+      const clean = normalizeStr(word);
+      if (!clean) return;
+
+      // Déclencheur spécial Malena
+      if (clean === 'malena') {
+        triggerMalenaEffect();
+      }
+
+      if (attempts.some(a => a.cleanWord === clean)) {
+        showFeedback(`Vous avez déjà proposé le mot "${clean}" !`, "amber");
+        return;
+      }
+
+      const temp = getSimilarityScore(clean);
+      const isExact = (clean === normalizeStr(targetWord)) || (temp >= 1000);
+
+      const attemptObj = {
+        id: Date.now(),
+        num: attempts.length + 1,
+        displayWord: clean,
+        cleanWord: clean,
+        temp: isExact ? 1000 : temp,
+        percentage: (isExact ? 100 : (temp / 10)).toFixed(1),
+        isExact
+      };
+
+      attempts.push(attemptObj);
+      attempts.sort((a, b) => b.temp - a.temp);
+
+      renderHistoryTable();
+
+      document.getElementById('word-input').value = '';
+      document.getElementById('btn-clear').classList.add('hidden');
+
+      if (isExact) {
+        handleVictory();
+      }
+    }
+
+    function renderHistoryTable() {
+      document.getElementById('stat-attempts').textContent = attempts.length;
+
+      if (attempts.length > 0) {
+        const best = attempts[0];
+        document.getElementById('stat-best-score').textContent = `${best.temp}°C`;
+        document.getElementById('stat-best-rank').textContent = `${best.percentage}%`;
+      }
+
+      const listContainer = document.getElementById('attempts-list');
+      listContainer.innerHTML = '';
+
+      attempts.forEach(item => {
+        const row = document.createElement('div');
+        row.className = `grid grid-cols-12 gap-2 items-center p-3 rounded-2xl text-sm border ${
+          item.temp >= 1000 ? 'bg-emerald-950/40 border-emerald-500/60' :
+          item.temp > 700 ? 'bg-pink-950/40 border-pink-500/50' : 'bg-purplebrand-900/40 border-purple-700/40'
+        }`;
+
+        row.innerHTML = `
+          <div class="col-span-1 text-center font-bold text-xs text-purple-300/50">#${item.num}</div>
+          <div class="col-span-4 sm:col-span-3 font-extrabold text-white truncate flex items-center gap-1.5">
+            ${item.isExact ? '✌️' : ''}
+            <span>${item.displayWord}</span>
+          </div>
+          <div class="col-span-3 sm:col-span-3 text-center font-black ${item.temp >= 1000 ? 'text-emerald-400' : 'text-pinkbrand-neon'}">
+            ${item.temp}°C <span class="text-[11px] opacity-75">(${item.percentage}%)</span>
+          </div>
+          <div class="col-span-4 sm:col-span-5 flex items-center gap-2">
+            <div class="w-full bg-purplebrand-950/80 h-3 rounded-full overflow-hidden p-0.5 border border-purple-800/60">
+              <div class="h-full rounded-full transition-all duration-300 ${item.temp >= 1000 ? 'bg-emerald-400' : 'btn-neon'}" style="width: ${Math.max(6, (item.temp / 1000) * 100)}%"></div>
+            </div>
+          </div>
+        `;
+        listContainer.appendChild(row);
+      });
+    }
+
+    function showFeedback(msg, type = "info") {
+      const fb = document.getElementById('feedback-msg');
+      fb.classList.remove('hidden', 'text-amber-400', 'text-pink-300');
+      fb.classList.add(type === "amber" ? 'text-amber-400' : 'text-pink-300');
+      fb.innerHTML = `<i class="fa-solid fa-circle-info text-xs"></i> ${msg}`;
+    }
+
+    function provideHint() {
+      if (isFinished) return;
+      const hintBox = document.getElementById('hint-box');
+      const hintText = document.getElementById('hint-text');
+      const category = SEMANTIC_DICTIONARY[targetWord]?.category || "Général";
+
+      hintBox.classList.remove('hidden');
+      hintText.innerHTML = `Indice : Domaine <strong>${category}</strong> — Première lettre : <strong class="text-pink-300 text-base">'${targetWord.charAt(0).toUpperCase()}'</strong> (${targetWord.length} lettres).`;
+    }
+
+    function surrenderGame() {
+      if (isFinished) return;
+      isFinished = true;
+      document.getElementById('word-input').disabled = true;
+      document.getElementById('game-status').textContent = 'Abandonné';
+      document.getElementById('game-status').className = 'text-xs font-bold px-3 py-1 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-block mt-1';
+      showFeedback(`Le mot secret était : <strong class="text-pinkbrand-neon uppercase text-base">${targetWord}</strong> ✌️`, "pink");
+    }
+
+    function handleVictory() {
+      isFinished = true;
+      const elapsedTime = Math.round((Date.now() - startTime) / 1000);
+
+      document.getElementById('game-status').textContent = 'Victoire !';
+      document.getElementById('game-status').className = 'text-xs font-bold px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 inline-block mt-1';
+
+      document.getElementById('victory-word-display').textContent = targetWord.toUpperCase();
+      document.getElementById('victory-attempts').textContent = attempts.length;
+      document.getElementById('victory-time').textContent = `${elapsedTime}s`;
+
+      document.getElementById('modal-victory').classList.remove('hidden');
+      triggerVictoryEmojiStorm();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initCanvas();
+      startNewGame(); // Lancement aléatoire automatique
+
+      const wordInput = document.getElementById('word-input');
+      const clearBtn = document.getElementById('btn-clear');
+
+      wordInput.addEventListener('input', (e) => {
+        if (e.target.value.length > 0) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+      });
+
+      clearBtn.addEventListener('click', () => {
+        wordInput.value = '';
+        clearBtn.classList.add('hidden');
+        wordInput.focus();
+      });
+
+      document.getElementById('guess-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleGuessSubmit(wordInput.value);
+      });
+
+      document.getElementById('btn-hint').addEventListener('click', provideHint);
+      document.getElementById('btn-give-up').addEventListener('click', surrenderGame);
+
+      const newWordHandler = () => startNewGame();
+      document.getElementById('btn-new-word').addEventListener('click', newWordHandler);
+      document.getElementById('btn-play-again').addEventListener('click', newWordHandler);
+    });
+  </script>
+</body>
+</html>
