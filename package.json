@@ -1,8 +1,0 @@
-{
-  "name": "malenhub",
-  "version": "1.0.0",
-  "description": "Le hub de jeux ultra stylé de Malen",
-  "scripts": {
-    "build": "node build.js"
-  }
-}
