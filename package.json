@@ -1,0 +1,14 @@
+{
+  "name": "malenhub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hub 3D : un trou par jeu, on saute dedans pour lancer le jeu.",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node build.js --serve",
+    "start": "node build.js --serve"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#070a16">
+<title>MalenHub &#9996;&#65039;</title>
+<meta name="description" content="Hub 3D : saute dans un trou pour lancer un jeu.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+<script src="games.js" onerror="window.MALEN_GAMES=undefined"></script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+
+<!-- ─────────────────────────────── HUD ─────────────────────────────── -->
+<div id="hud" class="hidden">
+  <div class="pill" id="countPill"><span id="countValue">0</span> jeux</div>
+  <div id="nearby"></div>
+  <div id="keyhint">
+    <kbd>ZQSD</kbd><kbd>WASD</kbd><span class="sep">&middot;</span><kbd>&#8593;</kbd><kbd>&#8592;</kbd><kbd>&#8595;</kbd><kbd>&#8594;</kbd>
+    <span class="sep">&middot;</span><kbd class="wide">Espace</kbd> sauter
+    <span class="sep">&middot;</span><span class="mouse">souris / Q&nbsp;E&nbsp;: cam&eacute;ra</span>
+  </div>
+  <button id="pauseBtn" title="Pause (Echap)" aria-label="Pause">&#10073;&#10073;</button>
+</div>
+
+<!-- ─────────────────────────── dive overlay ────────────────────────── -->
+<div id="dive"><span class="dive-eyebrow">Tu sautes dans</span><span class="dive-name"></span></div>
+<div id="fade"></div>
+<div id="toast"></div>
+
+<!-- ────────────────────────── touch controls ───────────────────────── -->
+<div id="touch" hidden>
+  <div id="stick"><div id="stickNub"></div></div>
+  <button id="jumpBtn">SAUT</button>
+</div>
+
+<!-- ─────────────────────────────── menu ────────────────────────────── -->
+<div id="menu" class="overlay">
+  <div class="card">
+    <div class="emoji">&#9996;&#65039;</div>
+    <h1>MALEN<span>HUB</span></h1>
+    <p class="sub" id="menuSub">Chargement&hellip;</p>
+    <div id="gameList"></div>
+    <button id="playBtn" class="cta">Jouer</button>
+    <p class="foot">Un trou par jeu. Marche, saute dedans, et c'est parti.</p>
+  </div>
+</div>
+
+<!-- ───────────────────────────── pause menu ────────────────────────── -->
+<div id="pause" class="overlay hidden">
+  <div class="card small">
+    <h2>Pause</h2>
+    <button id="resumeBtn" class="cta">Reprendre</button>
+    <button id="homeBtn" class="ghost">Retour au menu</button>
+  </div>
+</div>
+
+<noscript>
+  <div class="overlay"><div class="card"><h1>MALENHUB</h1><p class="sub">Active JavaScript pour jouer.</p></div></div>
+</noscript>
+
+<div id="fatal" class="overlay hidden">
+  <div class="card small">
+    <h2>Oups</h2>
+    <p class="sub" id="fatalMsg"></p>
+  </div>
+</div>
+
+<script type="module" src="js/hub.js"></script>
+</body>
+</html>

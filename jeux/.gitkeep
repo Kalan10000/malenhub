@@ -1,0 +1,6 @@
+# Tes jeux vont ici.
+#
+# Chaque fichier .html dans ce dossier = un trou dans le hub.
+# Lance `node build.js` après en avoir ajouté (ou laisse Vercel le faire au deploy).
+#
+# Un fichier qui commence par _ ou . est ignoré.

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#151d3d"/>
+      <stop offset="1" stop-color="#080c1a"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe083"/>
+      <stop offset="1" stop-color="#f0b52f"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+
+  <!-- ✌️ : two fingers in a V, palm, folded thumb -->
+  <g fill="url(#skin)" stroke="#c98f18" stroke-width="1.1" stroke-linejoin="round">
+    <g transform="rotate(-19 32 34)">
+      <rect x="28.4" y="7" width="6.4" height="24" rx="3.2"/>
+    </g>
+    <g transform="rotate(17 32 34)">
+      <rect x="35.2" y="5" width="6.4" height="26" rx="3.2"/>
+    </g>
+    <rect x="24.5" y="27" width="24" height="26" rx="7"/>
+  </g>
+  <path d="M24.5 41c-2.6-1-4.2.4-4.2 2.4 0 2.4 2.2 4.2 4.6 4.6" fill="none" stroke="#f0b52f" stroke-width="5.4" stroke-linecap="round"/>
+  <circle cx="39.5" cy="34" r="2" fill="#e0a521" opacity=".7"/>
+</svg>
