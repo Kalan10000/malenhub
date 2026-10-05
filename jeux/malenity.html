@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secret Gravity Typing App</title>
+    
+    <!-- Engine physique Matter.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            overflow: hidden;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: grab;
+        }
+
+        body:active {
+            cursor: grabbing;
+        }
+
+        #physics-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #typing-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 4rem;
+            font-weight: 800;
+            pointer-events: none;
+            text-align: center;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-width: 90%;
+            z-index: 1;
+            transition: opacity 0.1s ease;
+            letter-spacing: -0.02em;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        /* Indicatif de pause en haut à droite */
+        #pause-banner {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #ff0844;
+            font-size: 1.2rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            pointer-events: none;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            text-shadow: 0 0 10px rgba(255, 8, 68, 0.6);
+        }
+
+        /* Styles des entités physiques */
+        .falling-entity {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: center center;
+            will-change: transform;
+            user-select: none;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            white-space: nowrap;
+            line-height: 1;
+        }
+
+        .falling-text {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-shadow: 0 0 12px currentColor, 0 4px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        .falling-letter {
+            font-size: 3rem;
+            font-weight: 900;
+            text-shadow: 0 0 15px currentColor, 0 4px 12px rgba(0, 0, 0, 0.9);
+        }
+
+        .falling-emoji {
+            font-size: 3.2rem;
+            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.7));
+        }
+
+        .falling-emoji-large {
+            font-size: 4.8rem;
+            filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.8));
+        }
+
+        .falling-flag {
+            height: 48px;
+            width: auto;
+            border-radius: 4px;
+            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.8));
+            object-fit: contain;
+        }
+
+        /* Drapeau suisse carré (1:1) */
+        .falling-flag.flag-square {
+            width: 52px;
+            height: 52px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="pause-banner">⏸️ PAUSE</div>
+    <div id="typing-indicator"></div>
+    <div id="physics-container"></div>
+
+    <script>
+        let currentInput = "";
+        let modeDecomposition = false;
+        let isPaused = false;
+
+        const typingIndicator = document.getElementById('typing-indicator');
+        const pauseBanner = document.getElementById('pause-banner');
+        const container = document.getElementById('physics-container');
+        const entities = [];
+
+        // Base de données géante d'Emojis
+        const emojiDatabase = {
+            "sourire": "😀", "joie": "😃", "rire": "😄", "content": "😁", "mdr": "😆", "sueur": "😅",
+            "lol": "😂", "ptdr": "🤣", "amour": "😍", "bisou": "😘", "miam": "😋", "langue": "😛",
+            "fou": "🤪", "clin": "😉", "ange": "😇", "cool": "😎", "geek": "🤓", "monocle": "🧐",
+            "fête": "🥳", "cowboy": "🤠", "deguise": "🥸", "triste": "😢", "pleur": "😭", "colere": "😡",
+
+            "coeur": "❤️", "coeur rouge": "❤️", "coeur orange": "🧡", "coeur jaune": "💛", 
+            "coeur vert": "💚", "coeur bleu": "💙", "coeur violet": "💜", "coeur noir": "🖤", 
+            "coeur blanc": "🤍", "coeur brise": "💔", "coeur feu": "❤️‍🔥", "amour": "💖", "cupidon": "💘",
+
+            "main": "👋", "salut": "👋", "ok": "👌", "italien": "🤌", "victoire": "✌️", 
+            "doigts croises": "🤞", "pouce": "👍", "pouce en haut": "👍", "bravo": "👏", 
+            "poing": "👊", "vulcain": "🖖", "doigt": "🖕",
+
+            "parapluie": "☂️", "sac": "🎒", "sac a dos": "🎒", "lunettes": "🕶️", "chaussettes": "🧦",
+            "casquette": "🧢", "echarpe": "🧣", "gants": "🧤", "manteau": "🧥", "cravate": "👔",
+            "tshirt": "👕", "jean": "👖", "robe": "👗", "talon": "👠", "basket": "👟", "chaussure": "👟",
+            "valise": "🧳", "couronne": "👑", "bague": "💍", "diamant": "💎", "rouge a levres": "💄",
+            "casque": "🎧", "chapeau": "🎩",
+
+            "radio": "📻", "tv": "📺", "television": "📺", "pile": "🔋", "prise": "🔌", "bougie": "🕯️",
+            "lampe": "🔦", "extincteur": "🧯", "poubelle": "🗑️", "caddie": "🛒", "argent": "💰",
+            "billet": "💵", "piece": "🪙", "carte": "💳", "outils": "🧰", "cle": "🔑", "marteau": "🔨",
+            "tournevis": "🪛", "engrenage": "⚙️", "aimant": "🧲", "pistolet": "🔫", "pistolet a eau": "🔫",
+            "bombe": "💣", "petard": "🧨", "hache": "🪓", "couteau": "🔪", "dague": "🗡️", "bouclier": "🛡️",
+            "cigarette": "🚬", "cercueil": "⚰️", "cristal": "🔮", "adn": "🧬", "microscope": "🔬",
+            "telescope": "🔭", "seringue": "💉", "sang": "🩸", "pilule": "💊", "pansement": "🩹",
+            "stethoscope": "🩺", "rasoir": "🪒", "savon": "🧼", "eponge": "🧽", "canape": "🛋️",
+            "chaise": "🪑", "lit": "🛏️", "porte": "🚪", "peluche": "🧸", "ballon": "🎈", "cadeau": "🎁",
+
+            "pizza": "🍕", "burger": "🍔", "hamburger": "🍔", "frites": "🍟", "hotdog": "🌭",
+            "taco": "🌮", "burrito": "🌯", "popcorn": "🍿", "donut": "🍩", "biscuit": "🍪",
+            "gateau": "🍰", "chocolat": "🍫", "bonbon": "🍬", "sucette": "🍭", "miel": "🍯",
+            "glace": "🍦", "pomme": "🍎", "poire": "🍐", "citron": "🍋", "banane": "🍌",
+            "pasteque": "🍉", "fraise": "🍓", "cerise": "🍒", "ananas": "🍍", "avocat": "🥑",
+            "carotte": "🥕", "piment": "🌶️", "champignon": "🍄", "pain": "🍞", "croissant": "🥐", "baguette": "🥖",
+            "fromage": "🧀", "oeuf": "🍳", "sushi": "🍣", "cafe": "☕", "the": "🍵", "biere": "🍺",
+            "vin": "🍷", "cocktail": "🍸", "jus": "🧃", "lait": "🥛", "eau": "💧",
+
+            "voiture": "🚗", "taxi": "🚕", "bus": "🚌", "pompier": "🚒", "police": "🚓",
+            "ambulance": "🚑", "camion": "🚚", "tracteur": "🚜", "scooter": "🛵", "moto": "🏍️",
+            "velo": "🚲", "train": "🚆", "metro": "🚇", "avion": "✈️", "helicoptere": "🚁",
+            "bateau": "⛵", "fusee": "🚀", "soucoupe": "🛸", "maison": "🏠", "chateau": "🏰",
+            "ecole": "🏫", "hopital": "🏥", "stade": "🏟️", "parc": "🏞️", "montagne": "🏔️",
+            "volcan": "🌋", "desert": "🏜️", "ile": "🏝️",
+
+            "chien": "🐶", "chat": "🐱", "souris": "🐭", "hamster": "🐹", "lapin": "🐰",
+            "renard": "🦊", "ours": "🐻", "panda": "🐼", "lion": "🦁", "tigre": "🐯",
+            "licorne": "🦄", "vache": "🐮", "cochon": "🐷", "singe": "🐵", "poulet": "🐔",
+            "pingouin": "🐧", "aigle": "🦅", "canard": "🦆", "grenouille": "🐸", "serpent": "🐍",
+            "dragon": "🐉", "dinausaure": "🦖", "baleine": "🐳", "dauphin": "🐬", "requin": "🦈",
+            "pieuvre": "🐙", "papillon": "🦋", "abeille": "🐝", "araignee": "🕷️", "fleur": "🌸",
+            "rose": "🌹", "arbre": "🌳", "cactus": "🌵", "soleil": "☀️", "lune": "🌙", "etoile": "⭐",
+            "arc en ciel": "🌈", "feu": "🔥", "eclair": "⚡",
+
+            "foot": "⚽", "football": "⚽", "basket": "🏀", "tennis": "🎾", "boxing": "🥊",
+            "golf": "⛳", "ski": "🎿", "musique": "🎵", "guitare": "🎸", "fantome": "👻",
+            "alien": "👽", "robot": "🤖", "crane": "💀", "caca": "💩", "trophee": "🏆"
+        };
+
+        // Base de données des drapeaux CDN HD
+        const flagDatabase = {
+            "suisse": "ch", "switzerland": "ch",
+            "france": "fr",
+            "benin": "bj", "bénin": "bj",
+            "italie": "it", "ytalie": "it", "italy": "it",
+            "espagne": "es", "spain": "es",
+            "portugal": "pt",
+            "allemagne": "de", "germany": "de",
+            "bresil": "br", "brésil": "br", "brazil": "br",
+            "maroc": "ma", "morocco": "ma",
+            "algerie": "dz", "algérie": "dz",
+            "tunisie": "tn",
+            "turquie": "tr",
+            "usa": "us", "etats unis": "us", "états-unis": "us",
+            "canada": "ca",
+            "japon": "jp", "japan": "jp",
+            "chine": "cn", "china": "cn", "royaume-uni": "gb", "uk": "gb",
+            "belgique": "be", "russie": "ru", "argentine": "ar", "senegal": "sn",
+            "cameroun": "cm", "cote d'ivoire": "ci", "côte d'ivoire": "ci",
+            "mali": "ml", "congo": "cg", "madagascar": "mg", "haiti": "ht", "haïti": "ht"
+        };
+
+        // Base de données des marques
+        const brandDatabase = {
+            "tiktok": { name: "TikTok", color: "#00f2fe", icon: "🎵" },
+            "instagram": { name: "Instagram", color: "#fd1d1d", icon: "📸" },
+            "whatsapp": { name: "WhatsApp", color: "#25D366", icon: "💬" },
+            "youtube": { name: "YouTube", color: "#FF0000", icon: "▶️" },
+            "facebook": { name: "Facebook", color: "#1877F2", icon: "👥" },
+            "x": { name: "X", color: "#ffffff", icon: "✖️" },
+            "twitter": { name: "Twitter", color: "#1DA1F2", icon: "🐦" },
+            "snapchat": { name: "Snapchat", color: "#FFFC00", icon: "👻" },
+            "spotify": { name: "Spotify", color: "#1DB954", icon: "🎧" },
+            "netflix": { name: "Netflix", color: "#E50914", icon: "🍿" },
+            "google": { name: "Google", color: "#4285F4", icon: "🔍" },
+            "minecraft": { name: "Minecraft", color: "#5B8731", icon: "🟩" },
+            "fortnite": { name: "Fortnite", color: "#9544D1", icon: "🎯" },
+            "roblox": { name: "Roblox", color: "#e81c24", icon: "🟥" },
+            "chatgpt": { name: "ChatGPT", color: "#10A37F", icon: "🤖" },
+            "discord": { name: "Discord", color: "#5865F2", icon: "🎮" }
+        };
+
+        // Initialisation de Matter.js
+        const Engine = Matter.Engine,
+              Runner = Matter.Runner,
+              Bodies = Matter.Bodies,
+              Composite = Matter.Composite,
+              Events = Matter.Events,
+              Mouse = Matter.Mouse,
+              MouseConstraint = Matter.MouseConstraint;
+
+        const engine = Engine.create();
+        let ground, leftWall, rightWall;
+
+        function createBoundaries() {
+            const wallOptions = { isStatic: true, friction: 0.8, restitution: 0.2 };
+            const thickness = 300;
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            ground = Bodies.rectangle(w / 2, h + thickness / 2, w * 6, thickness, wallOptions);
+            leftWall = Bodies.rectangle(0 - thickness / 2, h / 2, thickness, h * 6, wallOptions);
+            rightWall = Bodies.rectangle(w + thickness / 2, h / 2, thickness, h * 6, wallOptions);
+
+            Composite.add(engine.world, [ground, leftWall, rightWall]);
+        }
+
+        createBoundaries();
+
+        // Contrôleur de la souris (Drag & Drop physique)
+        const mouse = Mouse.create(document.body);
+        const mouseConstraint = MouseConstraint.create(engine, {
+            mouse: mouse,
+            constraint: {
+                stiffness: 0.2,
+                render: { visible: false }
+            }
+        });
+        Composite.add(engine.world, mouseConstraint);
+
+        window.addEventListener('resize', () => {
+            const thickness = 300;
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            Matter.Body.setPosition(ground, { x: w / 2, y: h + thickness / 2 });
+            Matter.Body.setPosition(rightWall, { x: w + thickness / 2, y: h / 2 });
+            Matter.Body.setPosition(leftWall, { x: 0 - thickness / 2, y: h / 2 });
+        });
+
+        // Gestion de la boucle de mise à jour (Physique & Pause)
+        Events.on(engine, 'beforeUpdate', function(event) {
+            const delta = event.delta;
+
+            if (isPaused) {
+                // En Pause : Geler tous les corps sauf celui en cours de glissement par la souris
+                const draggedBody = mouseConstraint.body;
+                for (let i = 0; i < entities.length; i++) {
+                    const ent = entities[i];
+                    if (ent.body !== draggedBody) {
+                        Matter.Body.setVelocity(ent.body, { x: 0, y: 0 });
+                        Matter.Body.setAngularVelocity(ent.body, 0);
+                    }
+                }
+            } else {
+                // En Play : Écoulement du chronomètre des bombes
+                for (let i = entities.length - 1; i >= 0; i--) {
+                    const ent = entities[i];
+                    if (ent.isBomb) {
+                        ent.timer -= delta;
+                        if (ent.timer <= 0) {
+                            explodeBomb(ent);
+                        }
+                    }
+                }
+            }
+        });
+
+        // Synchronisation Matter.js -> DOM
+        Events.on(engine, 'afterUpdate', function() {
+            for (let i = 0; i < entities.length; i++) {
+                const ent = entities[i];
+                if (ent.body && ent.el) {
+                    ent.el.style.transform = `translate(${ent.body.position.x - ent.width / 2}px, ${ent.body.position.y - ent.height / 2}px) rotate(${ent.body.angle}rad)`;
+                }
+            }
+        });
+
+        Runner.run(Runner.create(), engine);
+
+        // Écouteur Clavier
+        window.addEventListener("keydown", (e) => {
+            if (e.key === " ") e.preventDefault();
+            if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) return;
+
+            if (e.key === "Enter") {
+                if (currentInput.trim() !== "") {
+                    processCommand(currentInput);
+                }
+                currentInput = "";
+            } else if (e.key === "Backspace") {
+                currentInput = currentInput.slice(0, -1);
+            } else if (e.key.length === 1) {
+                currentInput += e.key;
+            }
+
+            typingIndicator.innerText = currentInput;
+            typingIndicator.style.opacity = currentInput.length > 0 ? '1' : '0';
+        });
+
+        // Écouteur Coller (Ctrl + V)
+        window.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            if (!pastedText) return;
+
+            const tokens = pastedText.trim().split(/\s+/);
+            tokens.forEach((token, index) => {
+                setTimeout(() => {
+                    processCommand(token);
+                }, index * 40);
+            });
+        });
+
+        function processCommand(rawText) {
+            const exactText = rawText.trim();
+            if (!exactText) return;
+            const lowerText = exactText.toLowerCase();
+
+            // PAUSE / PLAY
+            if (lowerText === 'pause') {
+                isPaused = true;
+                engine.gravity.y = 0;
+                pauseBanner.style.opacity = '1';
+                return;
+            }
+            if (lowerText === 'play' || lowerText === 'reprendre') {
+                isPaused = false;
+                engine.gravity.y = 1;
+                pauseBanner.style.opacity = '0';
+                return;
+            }
+
+            // Modes Décomposition / Recomposition
+            if (lowerText === 'décomposition' || lowerText === 'decomposition') {
+                modeDecomposition = true;
+                return;
+            }
+            if (lowerText === 'récomposition' || lowerText === 'recomposition') {
+                modeDecomposition = false;
+                return;
+            }
+            if (lowerText === 'clear' || lowerText === 'effacer') {
+                clearAllEntities();
+                return;
+            }
+
+            // Pluies d'emojis
+            if (lowerText === 'kalan') {
+                spawnRain(['🎮', '🕹️', '👾'], 35);
+                return;
+            }
+            if (lowerText === 'joakim') {
+                spawnRain(['📷', '🎥', '📹', '📸'], 35);
+                return;
+            }
+            if (lowerText === 'aerialshot') {
+                spawnRain(['🚁', '🛸', '✈️'], 35);
+                return;
+            }
+            if (lowerText === 'emojis' || lowerText === 'emoji') {
+                spawnRain(Object.values(emojiDatabase), 40);
+                return;
+            }
+            if (lowerText === 'malena') {
+                spawnRain(['✌️', '✌🏻', '✌🏽'], 35);
+                return;
+            }
+
+            // Bombe
+            if (lowerText === 'bombe' || lowerText === 'bomb') {
+                createBombEntity();
+                return;
+            }
+
+            // Drapeaux
+            if (flagDatabase[lowerText]) {
+                createFlagEntity(flagDatabase[lowerText]);
+                return;
+            }
+
+            // Emojis direct ou dictionnaire
+            if (isSingleEmoji(exactText)) {
+                createEmojiEntity(exactText);
+                return;
+            }
+            if (emojiDatabase[lowerText]) {
+                createEmojiEntity(emojiDatabase[lowerText]);
+                return;
+            }
+
+            // Marques
+            if (brandDatabase[lowerText]) {
+                const b = brandDatabase[lowerText];
+                createTextEntity(`${b.icon} ${b.name}`, b.color);
+                return;
+            }
+
+            // Mots / Lettres
+            if (modeDecomposition && exactText.length > 1) {
+                const chars = Array.from(exactText);
+                chars.forEach((char, idx) => {
+                    setTimeout(() => {
+                        const color = getRandomColor(char);
+                        createLetterEntity(char, color);
+                    }, idx * 30);
+                });
+            } else {
+                const color = getRandomColor(exactText);
+                createTextEntity(exactText, color);
+            }
+        }
+
+        function createBombEntity() {
+            const el = document.createElement('div');
+            el.className = 'falling-entity falling-emoji-large';
+            el.innerText = '💣';
+            container.appendChild(el);
+
+            const radius = 38;
+            const x = Math.random() * (window.innerWidth - 120) + 60;
+            const y = -100;
+
+            const body = Bodies.circle(x, y, radius, {
+                restitution: 0.55,
+                friction: 0.2,
+                density: 0.1
+            });
+
+            Composite.add(engine.world, body);
+            const bombObj = { 
+                body, 
+                el, 
+                width: radius * 2, 
+                height: radius * 2, 
+                isBomb: true, 
+                timer: 3000 // 3 secondes
+            };
+            entities.push(bombObj);
+        }
+
+        function explodeBomb(bombObj) {
+            const bombPos = { x: bombObj.body.position.x, y: bombObj.body.position.y };
+
+            // 1. Débris d'explosion physiques permanents
+            spawnPhysicalExplosionParticles(bombPos.x, bombPos.y);
+
+            // 2. Onde de choc surpuissante
+            const explosionRadius = 2500;
+            const explosionForce = 3.5;
+
+            entities.forEach(ent => {
+                if (ent === bombObj) return;
+
+                let dx = ent.body.position.x - bombPos.x;
+                let dy = ent.body.position.y - bombPos.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist === 0) {
+                    dx = (Math.random() - 0.5) * 20;
+                    dy = -20;
+                    dist = 10;
+                }
+
+                if (dist < explosionRadius) {
+                    const normalX = dx / dist;
+                    const normalY = dy / dist;
+                    const forceFactor = Math.pow((1 - dist / explosionRadius), 0.5) * explosionForce;
+
+                    const vx = normalX * forceFactor * 42;
+                    const vy = (normalY * forceFactor * 42) - (forceFactor * 16);
+
+                    Matter.Body.setVelocity(ent.body, {
+                        x: ent.body.velocity.x + vx,
+                        y: ent.body.velocity.y + vy
+                    });
+
+                    Matter.Body.setAngularVelocity(ent.body, (Math.random() - 0.5) * 1.2);
+                }
+            });
+
+            // Suppression de la bombe
+            Composite.remove(engine.world, bombObj.body);
+            if (bombObj.el && bombObj.el.parentNode) {
+                bombObj.el.parentNode.removeChild(bombObj.el);
+            }
+            const idx = entities.indexOf(bombObj);
+            if (idx !== -1) entities.splice(idx, 1);
+        }
+
+        function spawnPhysicalExplosionParticles(x, y) {
+            const particleEmojis = ['💥', '🔥', '⚡', '💨', '💥', '✨', '🌋', '💣'];
+            const count = 20;
+
+            for (let i = 0; i < count; i++) {
+                const emoji = particleEmojis[Math.floor(Math.random() * particleEmojis.length)];
+                
+                const el = document.createElement('div');
+                el.className = 'falling-entity falling-emoji';
+                el.innerText = emoji;
+                container.appendChild(el);
+
+                const radius = 26;
+                const angle = (Math.PI * 2 / count) * i + (Math.random() * 0.4);
+                const spawnDist = 15 + Math.random() * 30;
+                const px = x + Math.cos(angle) * spawnDist;
+                const py = y + Math.sin(angle) * spawnDist;
+
+                const body = Bodies.circle(px, py, radius, {
+                    restitution: 0.7,
+                    friction: 0.2,
+                    density: 0.03
+                });
+
+                const speed = 25 + Math.random() * 30;
+                Matter.Body.setVelocity(body, {
+                    x: Math.cos(angle) * speed,
+                    y: Math.sin(angle) * speed - 8
+                });
+                Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.8);
+
+                Composite.add(engine.world, body);
+                entities.push({ body, el, width: radius * 2, height: radius * 2 });
+            }
+        }
+
+        function createTextEntity(text, color) {
+            const el = document.createElement('div');
+            el.className = 'falling-entity falling-text';
+            el.style.color = color;
+            el.innerText = text;
+            container.appendChild(el);
+
+            const rect = el.getBoundingClientRect();
+            const width = Math.max(rect.width, 20);
+            const height = Math.max(rect.height, 20);
+
+            const x = Math.random() * (window.innerWidth - width - 40) + width / 2 + 20;
+            const y = -100;
+
+            const body = Bodies.rectangle(x, y, width, height, {
+                restitution: 0.45,
+                friction: 0.6,
+                density: 0.04
+            });
+
+            Matter.Body.setAngle(body, (Math.random() - 0.5) * 0.4);
+            Composite.add(engine.world, body);
+            entities.push({ body, el, width, height });
+        }
+
+        function createLetterEntity(letter, color) {
+            const el = document.createElement('div');
+            el.className = 'falling-entity falling-letter';
+            el.style.color = color;
+            el.innerText = letter;
+            container.appendChild(el);
+
+            const rect = el.getBoundingClientRect();
+            const width = Math.max(rect.width, 25);
+            const height = Math.max(rect.height, 25);
+
+            const x = Math.random() * (window.innerWidth - width - 40) + width / 2 + 20;
+            const y = -100 - Math.random() * 50;
+
+            const body = Bodies.rectangle(x, y, width, height, {
+                restitution: 0.6,
+                friction: 0.4,
+                density: 0.03
+            });
+
+            Matter.Body.setAngle(body, (Math.random() - 0.5) * 0.6);
+            Composite.add(engine.world, body);
+            entities.push({ body, el, width, height });
+        }
+
+        function createEmojiEntity(emoji) {
+            const el = document.createElement('div');
+            el.className = 'falling-entity falling-emoji';
+            el.innerText = emoji;
+            container.appendChild(el);
+
+            const radius = 26;
+            const x = Math.random() * (window.innerWidth - 80) + 40;
+            const y = -100;
+
+            const body = Bodies.circle(x, y, radius, {
+                restitution: 0.6,
+                friction: 0.3,
+                density: 0.03
+            });
+
+            Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.4);
+            Composite.add(engine.world, body);
+            entities.push({ body, el, width: radius * 2, height: radius * 2 });
+        }
+
+        function createFlagEntity(countryCode) {
+            const code = countryCode.toLowerCase();
+            const isSquare = (code === 'ch'); // Format carré 1:1 pour la Suisse
+            const img = document.createElement('img');
+            img.className = 'falling-entity falling-flag' + (isSquare ? ' flag-square' : '');
+            img.src = `https://flagcdn.com/w160/${code}.png`;
+            img.alt = countryCode;
+            container.appendChild(img);
+
+            img.onload = () => {
+                const width = isSquare ? 52 : 72;
+                const height = isSquare ? 52 : 48;
+                const x = Math.random() * (window.innerWidth - width - 40) + width / 2 + 20;
+                const y = -100;
+
+                const body = Bodies.rectangle(x, y, width, height, {
+                    restitution: 0.4,
+                    friction: 0.5,
+                    density: 0.04
+                });
+
+                Matter.Body.setAngle(body, (Math.random() - 0.5) * 0.3);
+                Composite.add(engine.world, body);
+                entities.push({ body, el: img, width, height });
+            };
+        }
+
+        function spawnRain(itemList, count) {
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const item = itemList[Math.floor(Math.random() * itemList.length)];
+                    createEmojiEntity(item);
+                }, i * 25);
+            }
+        }
+
+        function clearAllEntities() {
+            entities.forEach(ent => {
+                Composite.remove(engine.world, ent.body);
+                if (ent.el && ent.el.parentNode) {
+                    ent.el.parentNode.removeChild(ent.el);
+                }
+            });
+            entities.length = 0;
+        }
+
+        function getRandomColor(str) {
+            const colors = ['#00f2fe', '#4facfe', '#ff0844', '#ffb199', '#f6d365', '#fda085', '#a1c4fd', '#c2e9fb', '#84fab0', '#8fd3f4', '#e0c3fc', '#8ec5fc'];
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        function isSingleEmoji(str) {
+            const regex = /^(\p{Extended_Pictographic}|\p{Emoji_Component})+$/u;
+            return regex.test(str) && str.length <= 4;
+        }
+    </script>
+</body>
+</html>
